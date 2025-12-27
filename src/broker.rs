@@ -41,9 +41,19 @@ pub struct MarketBroker {
     subscriptions: Arc<RwLock<HashMap<SymbolKey, Arc<SubscriptionData>>>>,
 }
 
+/// Internal container for shared market data and its lifecycle state.
+///
+/// This structure is stored within the broker's registry and is shared
+/// across all active [SubscriptionHandle]s for a specific [SymbolKey].
 struct SubscriptionData {
+    /// The L1-resident order book shared by all subscribers.
     book: Arc<L1FriendlyBook>,
-    ref_count: Arc<AtomicUsize>,
+
+    /// The number of active [SubscriptionHandle]s currently held.
+    ///
+    /// This is used to determine when a physical unsubscription should be
+    /// triggered and when the entry should be evicted from the registry.
+    ref_count: AtomicUsize,
 }
 
 /// An RAII handle that decrements the reference count when dropped.
@@ -89,7 +99,7 @@ impl MarketBroker {
         let data = subs.entry(key.clone()).or_insert_with(|| {
             Arc::new(SubscriptionData {
                 book: Arc::new(L1FriendlyBook::new()),
-                ref_count: Arc::new(AtomicUsize::new(0)),
+                ref_count: AtomicUsize::new(0),
             })
         });
 
