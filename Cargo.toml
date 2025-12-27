@@ -4,3 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+tokio = { version = "1", features = ["full"] }
+core_affinity = "0.8"
+crossbeam-utils = "0.8"
+parking_lot = "0.12" # Faster than standard Mutex for slow-path config
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort" # Minimizes binary bloat and branch logic
+opt-level = 3
