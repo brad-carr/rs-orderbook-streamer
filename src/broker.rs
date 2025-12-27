@@ -29,7 +29,13 @@ pub struct SymbolKey {
     pub product: ProductType,
 }
 
+/// Trait for handling subscription teardown logic.
+pub trait SubscriptionTeardown: Send + Sync {
+    fn teardown(&self, key: &SymbolKey);
+}
+
 /// Manages shared book states and subscription reference counting.
+#[derive(Clone)]
 pub struct MarketBroker {
     /// Maps symbols to their L1-resident book and active handle count.
     subscriptions: Arc<RwLock<HashMap<SymbolKey, Arc<SubscriptionData>>>>,
@@ -48,6 +54,7 @@ pub struct SubscriptionHandle {
     pub key: SymbolKey,
     pub book: Arc<L1FriendlyBook>,
     registry: Arc<RwLock<HashMap<SymbolKey, Arc<SubscriptionData>>>>,
+    teardown: Box<dyn SubscriptionTeardown>,
 }
 
 impl MarketBroker {
@@ -95,15 +102,22 @@ impl MarketBroker {
             key,
             book: Arc::clone(&data.book),
             registry: Arc::clone(&self.subscriptions),
+            teardown: Box::new(self.clone()),
         }
     }
 
-    fn initiate_subscription(&self, scope: &SymbolKey) {
+    fn initiate_subscription(&self, key: &SymbolKey) {
         todo!()
     }
 
-    fn terminate_subscription(&self, scope: &SymbolKey) {
+    fn terminate_subscription(&self, key: &SymbolKey) {
         todo!()
+    }
+}
+
+impl SubscriptionTeardown for MarketBroker {
+    fn teardown(&self, key: &SymbolKey) {
+        self.terminate_subscription(key);
     }
 }
 
@@ -114,7 +128,7 @@ impl Drop for SubscriptionHandle {
         if let Some(data) = subs.get(&self.key) {
             if data.ref_count.fetch_sub(1, Ordering::SeqCst) == 1 {
                 subs.remove(&self.key);
-                self.terminate_subscription(&self.key);
+                self.teardown.teardown(&self.key);
             }
         }
     }
