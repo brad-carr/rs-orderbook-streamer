@@ -33,7 +33,7 @@ pub fn parse_i64_with_precision(bytes: &[u8], start_idx: usize, target_scale: u3
         idx += 1;
     }
 
-    // 2. Integer Loop
+    // 2. Parse integer portion
     while let Some(&b) = it.next() {
         match b {
             b'0'..=b'9' => {
@@ -48,7 +48,7 @@ pub fn parse_i64_with_precision(bytes: &[u8], start_idx: usize, target_scale: u3
         }
     }
 
-    // 3. Fractional Loop
+    // 3. parse fractional portion
     let mut digits_after_decimal = 0u32;
     while let Some(&b) = it.next() {
         match b {
